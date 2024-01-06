@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useGLTF } from "@react-three/drei";
 import { GLTF } from "three-stdlib";
 import url from "./crystal.mp4";
+import { forwardRef } from "react";
 
 var texLoader = new THREE.TextureLoader();
 var newTexture = texLoader.load("./crystal.jpg");
@@ -27,7 +28,10 @@ type GLTFResult = GLTF & {
   };
 };
 
-export default function Model(props: JSX.IntrinsicElements["group"]) {
+export const Gameboy = forwardRef(function Model(
+  props: JSX.IntrinsicElements["group"],
+  ref: any
+) {
   const { nodes, materials } = useGLTF("/game_boy_color.glb") as GLTFResult;
   const [hovered, setHovered] = useState(false);
   const [showVideo, setShowVideo] = useState<boolean>(false);
@@ -47,7 +51,7 @@ export default function Model(props: JSX.IntrinsicElements["group"]) {
   });
 
   return (
-    <group {...props} dispose={null} rotation={[0, 0.4, 0]}>
+    <group {...props} dispose={null} rotation={[-1, 0, 0.1]} ref={ref}>
       <group rotation={[Math.PI / 2, 0, 0]}>
         <mesh
           geometry={nodes.defaultMaterial.geometry}
@@ -81,6 +85,6 @@ export default function Model(props: JSX.IntrinsicElements["group"]) {
       </group>
     </group>
   );
-}
+});
 
 useGLTF.preload("/game_boy_color.glb");

@@ -8,7 +8,7 @@ Title: Gameboy Cartridge lowpoly
 */
 
 import * as THREE from "three";
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useGLTF } from "@react-three/drei";
 import { GLTF } from "three-stdlib";
 
@@ -31,6 +31,12 @@ type ContextType = Record<
 
 export default function CartridgeModel(props: JSX.IntrinsicElements["group"]) {
   const { nodes, materials } = useGLTF("/gamebccartridge.glb") as GLTFResult;
+  const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    document.body.style.cursor = hovered ? "pointer" : "auto";
+  }, [hovered]);
+
   return (
     <group {...props} dispose={null}>
       <group rotation={[-Math.PI / 2, 0, 0]} scale={0.083}>
@@ -41,6 +47,8 @@ export default function CartridgeModel(props: JSX.IntrinsicElements["group"]) {
             position={[0, 50, 0]}
             rotation={[-Math.PI / 2, 0, 0]}
             scale={[88.487, 15.448, 100]}
+            onPointerOver={() => setHovered(true)}
+            onPointerOut={() => setHovered(false)}
           >
             <meshStandardMaterial map={newTexture} attach={"material"} />
           </mesh>
