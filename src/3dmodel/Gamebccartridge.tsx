@@ -11,6 +11,7 @@ import * as THREE from "three";
 import React, { useEffect, useRef, useState } from "react";
 import { useGLTF } from "@react-three/drei";
 import { GLTF } from "three-stdlib";
+import { useFrame } from "@react-three/fiber";
 
 var texLoader = new THREE.TextureLoader();
 var newTexture = texLoader.load("./newtext.png");
@@ -32,13 +33,23 @@ type ContextType = Record<
 export default function CartridgeModel(props: JSX.IntrinsicElements["group"]) {
   const { nodes, materials } = useGLTF("/gamebccartridge.glb") as GLTFResult;
   const [hovered, setHovered] = useState(false);
+  const groupRef = useRef<any>();
 
   useEffect(() => {
     document.body.style.cursor = hovered ? "pointer" : "auto";
   }, [hovered]);
 
+  useFrame((state) => {
+    const scaleUp = THREE.MathUtils.lerp(
+      groupRef.current.scale.z,
+      hovered ? 1.2 : 1,
+      0.17
+    );
+    groupRef.current.scale.set(scaleUp, scaleUp, scaleUp);
+  });
+
   return (
-    <group {...props} dispose={null}>
+    <group {...props} dispose={null} ref={groupRef}>
       <group rotation={[-Math.PI / 2, 0, 0]} scale={0.083}>
         <group rotation={[Math.PI / 2, 0, 0]} scale={0.01}>
           <mesh
@@ -50,7 +61,14 @@ export default function CartridgeModel(props: JSX.IntrinsicElements["group"]) {
             onPointerOver={() => setHovered(true)}
             onPointerOut={() => setHovered(false)}
           >
-            <meshStandardMaterial map={newTexture} attach={"material"} />
+            <meshStandardMaterial
+              map={newTexture}
+              attach={"material"}
+              roughness={0.3}
+              alphaTest={0.4}
+              toneMapped={true}
+              transparent={true}
+            />
           </mesh>
         </group>
       </group>

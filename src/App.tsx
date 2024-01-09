@@ -1,20 +1,16 @@
-import { Suspense, useRef, useState } from "react";
-import { Gameboy } from "./model/Game_boy_color";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Suspense, useRef } from "react";
+import { Gameboy } from "./3dmodel/Game_boy_color";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import "./App.css";
-import {
-  Bounds,
-  CameraControls,
-  OrbitControls,
-  useBounds,
-} from "@react-three/drei";
-import CartridgeModel from "./model/Gamebccartridge";
+import { Bounds, useBounds } from "@react-three/drei";
+import CartridgeModel from "./3dmodel/Gamebccartridge";
 import * as THREE from "three";
+import { publish, subscribe } from "./events/events";
+import React from "react";
 
 function App() {
-  const [cartridgeClicked, setCartridgeClicked] = useState<boolean>(false);
-  const [gamePicked, setGamePicked] = useState<boolean>(false);
-  const [groupFocused, setGroupFocused] = useState<boolean>(false);
+  const [gameSelected, setGameSelected] = React.useState<any>("");
+
   const gbRef = useRef<any>(null);
   const ref = useRef<any>(null);
 
@@ -25,9 +21,10 @@ function App() {
     return (
       <group
         ref={groupRef}
-        onClick={(e) => (
-          e.stopPropagation(), e.delta <= 2 && api.refresh(e.object).fit()
-        )}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.delta <= 2 && api.refresh(e.object).fit();
+        }}
       >
         {children}
       </group>
@@ -35,26 +32,21 @@ function App() {
   };
 
   const ZoomToGameboy = ({ children }: any) => {
+    const { camera } = useThree();
     const vec = new THREE.Vector3();
-    const preZoom = new THREE.Vector3();
-    useFrame((state) => {
-      if (gamePicked) {
-        console.log(gbRef.current.position);
-        state.camera.lookAt(
-          preZoom.set(
-            gbRef.current.position.x,
-            gbRef.current.position.y + 0,
-            gbRef.current.position.z
-          )
-        );
-        state.camera.position.lerp(vec.set(0.79, 1.1, 1), 0.1);
-        state.camera.updateMatrixWorld();
-      }
+
+    useFrame(() => {
+      const onChangeToHome = () => {
+        camera.position.set(gameSelected ? 0.2 : 0, gameSelected ? -0.1 : 0, 4);
+        camera.updateMatrixWorld();
+      };
+      subscribe("goGameboy", onChangeToHome);
     });
+
     return (
       <group
-        onClick={() => {
-          if (groupFocused) setGamePicked(true);
+        onClick={(e) => {
+          setGameSelected("abc");
         }}
       >
         {children}
@@ -66,7 +58,7 @@ function App() {
     useFrame((state) => {
       ref.current.rotation.y = THREE.MathUtils.lerp(
         ref.current.rotation.y,
-        (state.mouse.x * Math.PI) / 50,
+        (state.mouse.x * Math.PI) / 20,
         0.05
       );
       ref.current.rotation.x = THREE.MathUtils.lerp(
@@ -76,62 +68,93 @@ function App() {
       );
     });
 
-    return (
-      <group
-        ref={ref}
-        onClick={() => {
-          setCartridgeClicked(true);
-          setGroupFocused(true);
-        }}
-      >
-        {children}
-      </group>
-    );
+    return <group ref={ref}>{children}</group>;
   };
 
   return (
     <>
       <Suspense>
-        <Canvas camera={{ position: [1.2, 8, 3], zoom: 5 }}>
+        <Canvas
+          camera={{
+            position: [0, 0, 4],
+            zoom: 10,
+            onUpdate: (c: any) => c.updateProjectionMatrix(),
+          }}
+        >
           <ambientLight intensity={1} />
-          <directionalLight position={[4, 1.5, 3]} intensity={2} />
-          <OrbitControls
-            makeDefault
-            enableZoom={false}
-            enablePan={false}
-            enableRotate={false}
-          />
-          <Bounds fit clip observe margin={8}>
+          <directionalLight position={[0.7, 0, 0.3]} intensity={2} />
+          <primitive object={new THREE.AxesHelper(10)} />
+
+          <Bounds fit clip observe margin={10}>
             <Rig>
               <SelectToZoom>
                 <ZoomToGameboy>
-                  <CartridgeModel
-                    position={[1, 0, 1]}
-                    rotation={[-1.5, 0, 7]}
-                  />
+                  <CartridgeModel position={[0.5, 0.1, 0.3]} />
                 </ZoomToGameboy>
-                <CartridgeModel
-                  position={[1.1, 0, 1]}
-                  rotation={[-1.5, 0, -0.5]}
-                />
-                <CartridgeModel
-                  position={[1.2, 0, 1]}
-                  rotation={[-1.5, 0, 0]}
-                />
-                <CartridgeModel
-                  position={[1.3, 0.005, 1]}
-                  rotation={[-1.5, 0, 0.5]}
-                />
+                <ZoomToGameboy>
+                  <CartridgeModel position={[0.5, 0, 0.3]} />
+                </ZoomToGameboy>
 
-                <CartridgeModel
-                  position={[1.3, 0, 1.1]}
-                  rotation={[-1.5, 0, 0]}
-                />
+                <CartridgeModel position={[0.5, -0.1, 0.3]} />
+                <CartridgeModel position={[0.9, 0.1, 0.3]} />
+
+                <CartridgeModel position={[0.9, 0, 0.3]} />
               </SelectToZoom>
+              <Gameboy scale={0.2} ref={gbRef} />
             </Rig>
           </Bounds>
-          <Gameboy scale={0.2} position={[0.7, 0, 0.3]} ref={gbRef} />
         </Canvas>
+        <button
+          style={{
+            zIndex: 10000,
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+          }}
+          onClick={() => {
+            publish("goHome", {});
+          }}
+        />
+        {gameSelected && (
+          <div
+            style={{
+              zIndex: 10001,
+              position: "absolute",
+              left: "65%",
+              top: "50%",
+            }}
+          >
+            {
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <text
+                  style={{
+                    fontFamily: "Roboto",
+                    color: "white",
+                    fontSize: 32,
+                    lineHeight: "24px",
+                    fontWeight: 500,
+                  }}
+                >
+                  Pokemon Red and Blue TV Commercial
+                </text>
+                <text
+                  style={{
+                    fontFamily: "Roboto",
+                    color: "white",
+                    fontSize: 24,
+                    lineHeight: "24px",
+                    fontWeight: 500,
+                  }}
+                >
+                  Year: 1998
+                </text>
+                <button onClick={() => publish("goGameboy", {})}>
+                  Select Game
+                </button>
+              </div>
+            }
+          </div>
+        )}
       </Suspense>
     </>
   );

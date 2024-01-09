@@ -51,7 +51,13 @@ export const Gameboy = forwardRef(function Model(
   });
 
   return (
-    <group {...props} dispose={null} rotation={[-1, 0, 0.1]} ref={ref}>
+    <group
+      {...props}
+      dispose={null}
+      rotation={[0, 0, 0]}
+      position={[0.7, 0, 0.3]}
+      ref={ref}
+    >
       <group rotation={[Math.PI / 2, 0, 0]}>
         <mesh
           geometry={nodes.defaultMaterial.geometry}
