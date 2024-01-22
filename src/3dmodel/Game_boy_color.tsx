@@ -11,7 +11,7 @@ import * as THREE from "three";
 import { useEffect, useState } from "react";
 import { useGLTF } from "@react-three/drei";
 import { GLTF } from "three-stdlib";
-import url from "./crystal.mp4";
+import url from "./videos/crystal.mp4";
 import { forwardRef } from "react";
 
 var texLoader = new THREE.TextureLoader();

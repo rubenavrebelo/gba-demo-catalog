@@ -5,14 +5,26 @@ import "./App.css";
 import { Bounds, useBounds } from "@react-three/drei";
 import CartridgeModel from "./3dmodel/Gamebccartridge";
 import * as THREE from "three";
-import { publish, subscribe } from "./events/events";
+import { publish, subscribe, unsubscribe } from "./events/events";
 import React from "react";
+import { cartridges } from "./types/cartridge";
+import { css, jsx } from "@emotion/react";
+import { container, h1Css, sub } from "./styles/App.styles";
 
 function App() {
-  const [gameSelected, setGameSelected] = React.useState<any>("");
+  const [focused, setFocused] = React.useState<boolean>(false);
+  const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
 
   const gbRef = useRef<any>(null);
   const ref = useRef<any>(null);
+
+  const renderGames = () => {
+    return cartridges.map((c) => (
+      <ZoomToGameboy>
+        <CartridgeModel position={[c.x, c.z, c.y]} />
+      </ZoomToGameboy>
+    ));
+  };
 
   const SelectToZoom = ({ children }: any) => {
     const api = useBounds();
@@ -36,17 +48,26 @@ function App() {
     const vec = new THREE.Vector3();
 
     useFrame(() => {
-      const onChangeToHome = () => {
-        camera.position.set(gameSelected ? 0.2 : 0, gameSelected ? -0.1 : 0, 4);
-        camera.updateMatrixWorld();
+      const onChangeToHome = (id: string) => {
+        const game = cartridges.find((c) => c.id === id);
+
+        if (game) {
+          camera.position.set(game.offsetX, game.offsetY, 4);
+          camera.updateMatrixWorld();
+        }
       };
-      subscribe("goGameboy", onChangeToHome);
+      subscribe("goGameboy", (data: any) => onChangeToHome(data.detail));
+
+      return () => {
+        unsubscribe("goGameboy", (data: any) => onChangeToHome(data.detail));
+      };
     });
 
     return (
       <group
         onClick={(e) => {
-          setGameSelected("abc");
+          setFocused(true);
+          setTimeout(() => setButtonDisabled(false), 1500);
         }}
       >
         {children}
@@ -83,76 +104,61 @@ function App() {
         >
           <ambientLight intensity={1} />
           <directionalLight position={[0.7, 0, 0.3]} intensity={2} />
-          <primitive object={new THREE.AxesHelper(10)} />
 
           <Bounds fit clip observe margin={10}>
             <Rig>
-              <SelectToZoom>
-                <ZoomToGameboy>
-                  <CartridgeModel position={[0.5, 0.1, 0.3]} />
-                </ZoomToGameboy>
-                <ZoomToGameboy>
-                  <CartridgeModel position={[0.5, 0, 0.3]} />
-                </ZoomToGameboy>
-
-                <CartridgeModel position={[0.5, -0.1, 0.3]} />
-                <CartridgeModel position={[0.9, 0.1, 0.3]} />
-
-                <CartridgeModel position={[0.9, 0, 0.3]} />
-              </SelectToZoom>
+              <SelectToZoom>{renderGames()}</SelectToZoom>
               <Gameboy scale={0.2} ref={gbRef} />
             </Rig>
           </Bounds>
         </Canvas>
-        <button
-          style={{
-            zIndex: 10000,
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-          }}
-          onClick={() => {
-            publish("goHome", {});
-          }}
-        />
-        {gameSelected && (
-          <div
+        {!focused && (
+          <button
             style={{
-              zIndex: 10001,
+              zIndex: 10000,
               position: "absolute",
-              left: "65%",
+              left: "50%",
               top: "50%",
             }}
-          >
-            {
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <text
-                  style={{
-                    fontFamily: "Roboto",
-                    color: "white",
-                    fontSize: 32,
-                    lineHeight: "24px",
-                    fontWeight: 500,
-                  }}
-                >
-                  Pokemon Red and Blue TV Commercial
-                </text>
-                <text
-                  style={{
-                    fontFamily: "Roboto",
-                    color: "white",
-                    fontSize: 24,
-                    lineHeight: "24px",
-                    fontWeight: 500,
-                  }}
-                >
-                  Year: 1998
-                </text>
-                <button onClick={() => publish("goGameboy", {})}>
-                  Select Game
-                </button>
+            onClick={() => {
+              publish("goHome", "redblue");
+            }}
+          />
+        )}
+        {focused && (
+          <div css={container}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                padding: "32px 16px",
+              }}
+            >
+              <p css={h1Css}>Pokemon Red and Blue TV Commercial</p>
+              <div css={sub}>Year: 1998</div>
+              <div
+                style={{ fontSize: 13, fontFamily: "Roboto", fontWeight: 400 }}
+              >
+                {`Pokémon Red and Blue, released in 1996,
+                revolutionized gaming. As iconic RPGs, they introduced players
+                to the world of Pokémon, fostering a global phenomenon. The
+                games encouraged social interaction through trading, laying the
+                foundation for a timeless franchise that transcends video games,
+                leaving an indelible mark on popular culture.`}
               </div>
-            }
+              <button
+                disabled={buttonDisabled}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  publish("goGameboy", "redblue");
+                  setFocused(false);
+                  setButtonDisabled(true);
+                }}
+              >
+                Select Game
+              </button>
+            </div>
           </div>
         )}
       </Suspense>
